@@ -13,6 +13,7 @@ import asyncio
 import numpy as np
 
 import logfire
+from dotenv import load_dotenv
 
 from src.synth_data_pipeline.models import EmbeddedConversation, UniqueConversation
 from src.synth_data_pipeline.config import PATHS, FULL_PARAMS
@@ -22,8 +23,11 @@ from src.synth_data_pipeline.embedding_utils import (
     greedy_deduplicate,
 )
 
+# Load environment variables
+load_dotenv()
+
 # Configure logging
-logfire.configure(scrubbing=False)
+logfire.configure(send_to_logfire='if-token-exists', scrubbing=False)
 
 
 async def main(

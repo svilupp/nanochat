@@ -12,6 +12,7 @@ This script:
 import asyncio
 
 import logfire
+from dotenv import load_dotenv
 
 from src.synth_data_pipeline.models import (
     UniqueConversation,
@@ -20,6 +21,9 @@ from src.synth_data_pipeline.models import (
 )
 from src.synth_data_pipeline.config import PATHS, FULL_PARAMS
 from src.synth_data_pipeline.utils import load_jsonl, save_jsonl
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logfire.configure(scrubbing=False)
