@@ -30,10 +30,7 @@ load_dotenv()
 logfire.configure(scrubbing=False)
 
 
-async def main(
-    input_file: str = None,
-    output_file: str = None
-):
+async def main(input_file: str = None, output_file: str = None):
     """
     Main function to embed conversations.
 
@@ -57,7 +54,7 @@ async def main(
         # Convert messages to text
         text = conversation_to_text(
             [msg.model_dump() for msg in jc.conversation.messages],
-            max_chars=FULL_PARAMS.embedding_max_chars
+            max_chars=FULL_PARAMS.embedding_max_chars,
         )
         texts.append(text)
 
@@ -72,7 +69,7 @@ async def main(
             model=FULL_PARAMS.embedding_model,
             dimensions=FULL_PARAMS.embedding_dimensions,
             batch_size=FULL_PARAMS.embedding_batch_size,
-            max_concurrent=20
+            max_concurrent=20,
         )
 
     logfire.info(f"Generated {len(embeddings)} embeddings")
@@ -84,7 +81,7 @@ async def main(
             conversation=jc.conversation,
             judgment=jc.judgment,
             embedding=emb.tolist(),  # Convert numpy array to list
-            text_preview=text[:200]  # First 200 chars for debugging
+            text_preview=text[:200],  # First 200 chars for debugging
         )
         embedded_convs.append(embedded_conv)
 
@@ -94,14 +91,18 @@ async def main(
 
     # Print sample
     if embedded_convs:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("EMBEDDING SAMPLE:")
-        print("="*80)
+        print("=" * 80)
         sample = embedded_convs[0]
         print(f"Conversation preview: {sample.text_preview}...")
         print(f"Embedding dimensions: {len(sample.embedding)}")
-        print(f"Quality score: {sample.judgment.overall_score:.2f}")
-        print("="*80 + "\n")
+        print(f"Quality pass: {sample.judgment.overall_pass}")
+        print(f"  Factually accurate: {sample.judgment.factually_accurate}")
+        print(f"  Natural conversation: {sample.judgment.natural_conversation}")
+        print(f"  On topic: {sample.judgment.on_topic}")
+        print(f"  Adds value: {sample.judgment.adds_value}")
+        print("=" * 80 + "\n")
 
 
 if __name__ == "__main__":

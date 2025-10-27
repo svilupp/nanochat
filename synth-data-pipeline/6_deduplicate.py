@@ -27,9 +27,7 @@ logfire.configure(scrubbing=False)
 
 
 async def main(
-    input_file: str = None,
-    output_file: str = None,
-    similarity_threshold: float = None
+    input_file: str = None, output_file: str = None, similarity_threshold: float = None
 ):
     """
     Main function to deduplicate conversations.
@@ -42,12 +40,14 @@ async def main(
     # Use defaults from config if not specified
     input_file = input_file or PATHS.stage5_conversations_embedded
     output_file = output_file or PATHS.stage6_conversations_unique
-    similarity_threshold = similarity_threshold or FULL_PARAMS.dedup_similarity_threshold
+    similarity_threshold = (
+        similarity_threshold or FULL_PARAMS.dedup_similarity_threshold
+    )
 
     logfire.info(
         "Starting deduplication",
         input_file=input_file,
-        similarity_threshold=similarity_threshold
+        similarity_threshold=similarity_threshold,
     )
 
     # Load embedded conversations
@@ -56,7 +56,8 @@ async def main(
 
     # Extract embeddings and scores
     embeddings = [np.array(ec.embedding, dtype=np.float32) for ec in embedded_convs]
-    scores = [ec.judgment.overall_score for ec in embedded_convs]
+    # Convert boolean overall_pass to numeric score (1.0 for pass, 0.0 for fail)
+    scores = [1.0 if ec.judgment.overall_pass else 0.0 for ec in embedded_convs]
 
     # L2-normalize embeddings for cosine similarity
     with logfire.span("normalize_embeddings"):
@@ -67,9 +68,7 @@ async def main(
     # Deduplicate
     with logfire.span("deduplicate"):
         kept_indices = greedy_deduplicate(
-            normalized_embeddings,
-            scores,
-            similarity_threshold=similarity_threshold
+            normalized_embeddings, scores, similarity_threshold=similarity_threshold
         )
 
     # Create unique conversations (without embeddings to save space)
@@ -77,8 +76,7 @@ async def main(
     for idx in kept_indices:
         ec = embedded_convs[idx]
         unique_conv = UniqueConversation(
-            conversation=ec.conversation,
-            judgment=ec.judgment
+            conversation=ec.conversation, judgment=ec.judgment
         )
         unique_convs.append(unique_conv)
 
@@ -96,23 +94,23 @@ async def main(
     )
 
     # Print statistics
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("DEDUPLICATION STATISTICS:")
-    print("="*80)
+    print("=" * 80)
     print(f"Total conversations: {total}")
     print(f"Unique conversations: {kept}")
     print(f"Duplicates removed: {removed} ({removal_rate:.1f}%)")
     print(f"Similarity threshold: {similarity_threshold}")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
-    # Print score statistics for unique conversations
-    unique_scores = [uc.judgment.overall_score for uc in unique_convs]
-    if unique_scores:
-        print("Unique conversation scores:")
-        print(f"  Average: {np.mean(unique_scores):.2f}")
-        print(f"  Min: {np.min(unique_scores):.2f}")
-        print(f"  Max: {np.max(unique_scores):.2f}")
-        print("="*80 + "\n")
+    # Print quality statistics for unique conversations
+    passing = sum(1 for uc in unique_convs if uc.judgment.overall_pass)
+    if unique_convs:
+        print("Unique conversation quality:")
+        print(
+            f"  Passing all criteria: {passing}/{len(unique_convs)} ({passing / len(unique_convs) * 100:.1f}%)"
+        )
+        print("=" * 80 + "\n")
 
 
 if __name__ == "__main__":
